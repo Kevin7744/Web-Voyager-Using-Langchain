@@ -12,6 +12,6 @@ It works by viewing annotated browser screenshots for each turn, then choosing t
 
 Install packages
 ```
-pip install langchain langchain-core langgraph plauwright
+pip install langchain langchain-core langgraph playwright
 ```
 
