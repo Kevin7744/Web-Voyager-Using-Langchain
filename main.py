@@ -60,7 +60,10 @@ async def click(state: AgentState):
         return f"Failed to click bounding box labeled as number {click_args}"
     bbox_id = click_args[0]
     bbox_id = int(bbox_id)
-    bbox = state["bboxes"][bbox_id - 1] # 1-indexed
+    try:
+        bbox = state["bboxes"][bbox_id] # 1-indexed
+    except:
+        return f"Error: no bbox for : {bbox_id}"
     x, y = bbox["x"], bbox["y"]
     res = await page.mouse.click(x, y)
     return f"Clicked {bbox_id}"
@@ -283,7 +286,7 @@ async def call_agent(question: str, page, max_steps: int = 150):
             "scratchpad": [],
         },
         {
-            "recursion_limit": max_steps
+            "recursion_limit": max_steps,
         },
     )
     final_answer = None
@@ -291,11 +294,11 @@ async def call_agent(question: str, page, max_steps: int = 150):
     async  for event in event_stream:
         if "agent" not in event:
             continue
-        pred = event("agent").get("prediction") or ()
+        pred = event["agent"].get("prediction") or {}
         action = pred.get("action") 
         action_input = pred.get("args")
         display.clear_output(wait=False)
-        steps.append(f"(len[steps] = 1), {action}: {action_input}")
+        steps.append(f"{len(steps) + 1}. {action}: {action_input}")
         print("\n".join(steps))
         display.display(display.Image(base64.b64decode(event["agent"]["img"])))
         if "ANSWER" in action:
