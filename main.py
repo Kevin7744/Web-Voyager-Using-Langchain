@@ -1,6 +1,33 @@
 import os
 from getpass import getpass
 
+import nest_asyncio
+
+from typing import List, Optional, TypedDict
+
+from langchain_core.runnables import chain as chain_decorator
+from langchain_core.messages import BaseMessage, SystemMessage
+from langchain import hub
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables import RunnablePassthrough
+from langchain_openai import ChatOpenAI
+from langchain_core.runnables import RunnableLambda
+from langgraph.graph import END, StateGraph
+
+from playwright.async_api import Page
+import playwright
+from IPython import display
+from playwright.async_api import async_playwright
+
+import asyncio
+import platform
+
+import asyncio
+import base64
+
+
+
 def _getpass(env_var: str):
     if not os.environ.get(env_var):
         os.environ[env_var] = getpass(f"{env_var}")
@@ -11,21 +38,13 @@ _getpass("LANGCHAIN_API_KEY")
 _getpass("OPENAI_API_KEY")
 
 
-import nest_asyncio
-
 # For running playwright in jupiter notebook
-nest_asyncio.apply()
+# nest_asyncio.apply()
 
 #Define Gragh state
 """The state provides the inputs to each node in the graph
 In this case, the agent will track the webpage object (within the browser), annotated images + bounding boxes, the user's initial request, and the messages containing the agent scratchpad, system prompt, and other information.
 """
-
-from typing import List, Optional, TypedDict
-
-from langchain_core.messages import BaseMessage, SystemMessage
-from playwright.async_api import Page
-
 class BBox(TypedDict):
     x: float
     y: float
@@ -49,8 +68,6 @@ class AgentState(TypedDict):
     observation: str # The most recent response from a tool
 
 
-import asyncio
-import platform
 
 async def click(state: AgentState):
     # - Click [Numerical_label]
@@ -132,11 +149,6 @@ async def to_google(state: AgentState):
     return "Navigated to google.com"
 
 
-import asyncio
-import base64
-
-from langchain_core.runnables import chain as chain_decorator
-
 with open("mark_page.js") as f:
     mark_page_script = f.read()
 
@@ -158,12 +170,6 @@ async def mark_page(page):
         "bboxes": bboxes,
     }
 
-
-from langchain import hub
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.runnables import RunnablePassthrough
-from langchain_openai import ChatOpenAI
 
 async def annotate(state):
     marked_page = await mark_page.with_retry().ainvoke(state["page"])
@@ -224,9 +230,6 @@ def update_scratchpad(state: AgentState):
     return {**state, "scratchpad": [SystemMessage(content=txt)]}
 
 
-from langchain_core.runnables import RunnableLambda
-from langgraph.graph import END, StateGraph
-
 graph_builder = StateGraph(AgentState)
 
 graph_builder.add_node("agent", agent)
@@ -266,11 +269,6 @@ def select_tool(state: AgentState):
 graph_builder.add_conditional_edges("agent", select_tool, {})
 
 graph = graph_builder.compile()
-
-
-import playwright
-from IPython import display
-from playwright.async_api import async_playwright
 
 browser = async_playwright().start()
 # we will set headless=flase, to see the magic on the web
